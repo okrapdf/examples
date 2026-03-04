@@ -1,0 +1,27 @@
+{
+  "name": "okrapdf-collection-admin",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ai-sdk/react": "^3.0.113",
+    "ai": "^6.0.111",
+    "okrapdf": "^0.11.0",
+    "ra-data-fakerest": "^5.6.0",
+    "react": "^18.3.1",
+    "react-admin": "^5.6.0",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.0"
+  }
+}
