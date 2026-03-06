@@ -7,6 +7,7 @@ Deployable example apps built with [okrapdf](https://github.com/okrapdf/okrapdf-
 | Example | Description | Stack |
 |---------|-------------|-------|
 | [collection-admin](./collection-admin) | Browse a document collection — thumbnails, chat, audit logs | React, react-admin, Vite |
+| [chatpdf-widget](./chatpdf-widget) | Embeddable PDF chat widget — one script tag, streaming, works with Typebot/Botpress | Vanilla JS, SSE |
 
 ## Getting Started
 

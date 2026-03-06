@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OkraPDF Chat Widget – Embed PDF chat on any site</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a1a; background: linear-gradient(135deg, #fff7ed 0%, #fff 50%, #f0f9ff 100%); min-height: 100vh; }
+
+    /* Hero */
+    .hero { max-width: 720px; margin: 0 auto; padding: 4rem 1.5rem 2rem; text-align: center; }
+    .badge { display: inline-block; font-size: 0.75rem; font-weight: 600; color: #c2410c; background: #fff7ed; border: 1px solid #fed7aa; padding: 0.25rem 0.75rem; border-radius: 9999px; margin-bottom: 1.5rem; }
+    h1 { font-size: 2.25rem; font-weight: 700; line-height: 1.2; margin-bottom: 0.75rem; }
+    h1 span { color: #ea580c; }
+    .subtitle { font-size: 1.05rem; color: #6b7280; line-height: 1.6; margin-bottom: 2rem; }
+
+    /* Cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; max-width: 720px; margin: 0 auto 2.5rem; padding: 0 1.5rem; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; }
+    .card h3 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; }
+    .card p { font-size: 0.8rem; color: #6b7280; line-height: 1.5; }
+    .card code { background: #f3f4f6; padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.75rem; }
+
+    /* Inline demo */
+    .demo-section { max-width: 720px; margin: 0 auto; padding: 0 1.5rem 2rem; }
+    .demo-section h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; text-align: center; }
+    .chat-inline { border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; background: #fff; height: 480px; display: flex; flex-direction: column; }
+    .chat-header { padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; gap: 0.5rem; }
+    .chat-header .dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+    .chat-header span { font-size: 0.85rem; font-weight: 600; }
+    .chat-header .doc-name { font-size: 0.75rem; color: #9ca3af; margin-left: auto; }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .msg { max-width: 85%; padding: 0.6rem 0.9rem; border-radius: 14px; font-size: 0.85rem; line-height: 1.5; animation: fadeIn 0.2s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .msg.bot { background: #f3f4f6; color: #1a1a1a; border-bottom-left-radius: 4px; align-self: flex-start; }
+    .msg.user { background: #ea580c; color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
+    .msg.bot.typing { color: #9ca3af; }
+    .chat-input { display: flex; gap: 0.5rem; padding: 0.75rem 1rem; border-top: 1px solid #f3f4f6; }
+    .chat-input input { flex: 1; border: 1px solid #e5e7eb; border-radius: 9999px; padding: 0.5rem 1rem; font-size: 0.85rem; outline: none; }
+    .chat-input input:focus { border-color: #ea580c; box-shadow: 0 0 0 2px rgba(234,88,12,0.15); }
+    .chat-input button { background: #ea580c; color: #fff; border: none; border-radius: 50%; width: 36px; height: 36px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+    .chat-input button:hover { background: #c2410c; }
+    .chat-input button:disabled { background: #d4d4d8; cursor: default; }
+    .chat-input button svg { width: 16px; height: 16px; }
+    .suggestions { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.5rem 1rem; }
+    .suggestions button { font-size: 0.75rem; padding: 0.35rem 0.7rem; border-radius: 9999px; border: 1px solid #fed7aa; background: #fff7ed; color: #c2410c; cursor: pointer; transition: all 0.15s; }
+    .suggestions button:hover { background: #ea580c; color: #fff; border-color: #ea580c; }
+
+    /* Snippet */
+    .snippet-section { max-width: 720px; margin: 0 auto; padding: 1.5rem; }
+    .snippet-section h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; }
+    .snippet { background: #1e1e1e; color: #d4d4d4; border-radius: 12px; padding: 1.25rem; overflow-x: auto; font-size: 0.78rem; line-height: 1.6; }
+    .snippet .c { color: #6a9955; }
+    .snippet .s { color: #ce9178; }
+    .snippet .k { color: #569cd6; }
+    .snippet .f { color: #dcdcaa; }
+
+    .footer { text-align: center; padding: 2rem; font-size: 0.8rem; color: #9ca3af; }
+    .footer a { color: #ea580c; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <div class="badge">Open-Source Example</div>
+    <h1>Chat with any PDF on <span>any website</span></h1>
+    <p class="subtitle">
+      OkraPDF extracts and understands your document. Embed a chat widget anywhere with one script tag.
+      Works with Typebot, Botpress, or the lightweight widget below.
+    </p>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h3>1. Upload a PDF</h3>
+      <p><code>npx okrapdf upload file.pdf</code><br/>Get an OpenAI-compatible completions endpoint.</p>
+    </div>
+    <div class="card">
+      <h3>2. Embed the widget</h3>
+      <p>Paste one <code>&lt;script&gt;</code> tag. The chat bubble appears on your site, powered by your PDF.</p>
+    </div>
+    <div class="card">
+      <h3>3. Or use Typebot/Botpress</h3>
+      <p>Point any chatbot builder at your OkraPDF endpoint. It's OpenAI-compatible.</p>
+    </div>
+  </div>
+
+  <!-- Live inline demo -->
+  <div class="demo-section">
+    <h2>Live Demo — Amcor Q4 FY2023 Earnings</h2>
+    <div class="chat-inline" id="chat">
+      <div class="chat-header">
+        <div class="dot"></div>
+        <span>OkraPDF</span>
+        <span class="doc-name">Amcor Q4 FY2023 Earnings.pdf</span>
+      </div>
+      <div class="chat-messages" id="messages">
+        <div class="msg bot">Hi! I can answer questions about this PDF. Try one of the suggestions below, or ask your own.</div>
+      </div>
+      <div class="suggestions" id="suggestions">
+        <button onclick="ask(this.textContent)">What was total revenue?</button>
+        <button onclick="ask(this.textContent)">Key takeaways?</button>
+        <button onclick="ask(this.textContent)">EPS guidance for FY2024?</button>
+      </div>
+      <div class="chat-input">
+        <input type="text" id="input" placeholder="Ask about the document..." onkeydown="if(event.key==='Enter')send()" />
+        <button id="sendBtn" onclick="send()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Embed snippet -->
+  <div class="snippet-section">
+    <h2>Embed on your own site</h2>
+    <div class="snippet">
+      <span class="c">// 1. Script tag — paste before &lt;/body&gt;</span><br/>
+      &lt;<span class="k">script</span>&gt;<br/>
+      &nbsp;&nbsp;(<span class="k">function</span>() {<br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">const</span> DOC = <span class="s">'YOUR_DOC_ID'</span>;<br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">const</span> KEY = <span class="s">'YOUR_PUBLISHABLE_KEY'</span>;<br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="k">const</span> s = document.<span class="f">createElement</span>(<span class="s">'script'</span>);<br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;s.src = <span class="s">'https://typebot-chatpdf.pages.dev/widget.js'</span>;<br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;s.dataset.doc = DOC;<br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;s.dataset.key = KEY;<br/>
+      &nbsp;&nbsp;&nbsp;&nbsp;document.body.<span class="f">appendChild</span>(s);<br/>
+      &nbsp;&nbsp;})();<br/>
+      &lt;/<span class="k">script</span>&gt;<br/><br/>
+      <span class="c">// 2. Or use Typebot — point HTTP Request block at:</span><br/>
+      <span class="c">// POST https://api.okrapdf.com/v1/documents/{id}/chat/completions</span><br/>
+      <span class="c">// Authorization: Bearer YOUR_OKRA_KEY</span>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <a href="https://okrapdf.com">OkraPDF</a> &middot;
+    <a href="https://typebot.io">Typebot</a> &middot;
+    <a href="https://github.com/okrapdf">GitHub</a>
+  </footer>
+
+  <script>
+    // Demo document + publishable key (client-safe, read-only)
+    const DOC_ID = 'ocr-8ikGvih2rrMI0oqKuYovw';
+    const API_KEY = 'okra_pk_7490571d0e1867fae9b81b18d13164e02ad2f79ef7c8da24';
+    const API_URL = `https://api.okrapdf.com/v1/documents/${DOC_ID}/chat/completions`;
+    const history = [];
+    let busy = false;
+
+    function $(id) { return document.getElementById(id); }
+
+    function addMsg(role, text) {
+      const el = document.createElement('div');
+      el.className = `msg ${role}`;
+      el.textContent = text;
+      $('messages').appendChild(el);
+      $('messages').scrollTop = $('messages').scrollHeight;
+      return el;
+    }
+
+    function ask(text) {
+      $('input').value = text;
+      send();
+    }
+
+    async function send() {
+      const text = $('input').value.trim();
+      if (!text || busy) return;
+      busy = true;
+      $('input').value = '';
+      $('sendBtn').disabled = true;
+      $('suggestions').style.display = 'none';
+
+      addMsg('user', text);
+      history.push({ role: 'user', content: text });
+
+      const typing = addMsg('bot typing', 'Thinking...');
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'moonshotai/kimi-k2.5', messages: history, stream: true }),
+        });
+
+        typing.textContent = '';
+        typing.classList.remove('typing');
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let full = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          for (const line of chunk.split('\n')) {
+            if (!line.startsWith('data: ') || line === 'data: [DONE]') continue;
+            try {
+              const j = JSON.parse(line.slice(6));
+              const delta = j.choices?.[0]?.delta?.content;
+              if (delta) { full += delta; typing.textContent = full; }
+            } catch {}
+          }
+          $('messages').scrollTop = $('messages').scrollHeight;
+        }
+
+        history.push({ role: 'assistant', content: full });
+      } catch (e) {
+        typing.textContent = 'Something went wrong. Try again.';
+        typing.classList.remove('typing');
+      }
+
+      busy = false;
+      $('sendBtn').disabled = false;
+    }
+  </script>
+</body>
+</html>
