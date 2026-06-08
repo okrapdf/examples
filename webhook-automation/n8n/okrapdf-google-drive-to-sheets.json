@@ -1,0 +1,296 @@
+{
+  "name": "okraPDF: Google Drive PDF to Sheets via lifecycle webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## okraPDF Drive intake\n\n1. Run the manual trigger once to subscribe this n8n workflow to `document.processed`.\n2. Drop a PDF into the watched Google Drive folder.\n3. n8n uploads the PDF to `/v1/upload`.\n4. okraPDF calls the Webhook node when the hosted PDF is ready.\n5. n8n appends the ready event to Google Sheets.\n\nUpload acceptance is not treated as extraction completion. The webhook is the durable handoff.",
+        "height": 420,
+        "width": 420,
+        "color": 5
+      },
+      "id": "sticky-main",
+      "name": "Workflow Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [40, 40]
+    },
+    {
+      "parameters": {},
+      "id": "manual-register",
+      "name": "Register Webhook Manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [460, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.okrapdf.com/v1/webhooks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event\": \"document.processed\",\n  \"target_url\": \"{{ $node['okraPDF Ready Webhook'].webhookUrl }}\",\n  \"source\": \"n8n\"\n}",
+        "options": {}
+      },
+      "id": "subscribe-ready",
+      "name": "Subscribe Ready Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 80],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_OKRA_CREDENTIAL_ID",
+          "name": "okraPDF API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "YOUR_FOLDER_ID",
+          "mode": "list",
+          "cachedResultName": "PDF Inbox"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "id": "gdrive-trigger",
+      "name": "New PDF in Drive",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "gdrive-download",
+      "name": "Download PDF",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [700, 300],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "YOUR_DRIVE_CREDENTIAL_ID",
+          "name": "Google Drive"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.okrapdf.com/v1/upload",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "file_name",
+              "value": "={{ $('New PDF in Drive').item.json.name || 'upload.pdf' }}"
+            },
+            {
+              "name": "preset",
+              "value": "host"
+            },
+            {
+              "name": "tags",
+              "value": "n8n,google-drive"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "okra-upload",
+      "name": "Upload to okraPDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [940, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_OKRA_CREDENTIAL_ID",
+          "name": "okraPDF API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "okrapdf-ready",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "id": "okra-webhook",
+      "name": "okraPDF Ready Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [460, 560],
+      "webhookId": "okrapdf-ready"
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $json.body || $json;\nconst data = event.data || {};\n\nreturn [{\n  json: {\n    eventId: event.id,\n    eventType: event.type,\n    subscriptionId: event.subscription_id,\n    jobId: data.job_id || '',\n    fileId: data.file_id || '',\n    fileName: data.filename || '',\n    status: data.status || '',\n    hostedUrl: data.hosted_url || '',\n    pdfUrl: data.pdf_url || '',\n    embedUrl: data.embed_url || '',\n    downloadUrl: data.download_url || '',\n    readyAt: event.created_at || new Date().toISOString()\n  }\n}];"
+      },
+      "id": "format-ready-event",
+      "name": "Format Ready Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 560]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "PDF Intake Log"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Ready PDFs"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Event ID": "={{ $json.eventId }}",
+            "Event Type": "={{ $json.eventType }}",
+            "Job ID": "={{ $json.jobId }}",
+            "File ID": "={{ $json.fileId }}",
+            "File Name": "={{ $json.fileName }}",
+            "Status": "={{ $json.status }}",
+            "Hosted URL": "={{ $json.hostedUrl }}",
+            "Direct PDF URL": "={{ $json.pdfUrl }}",
+            "Ready Date": "={{ $json.readyAt.split('T')[0] }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "sheets-log",
+      "name": "Log Ready PDF to Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [940, 560],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Register Webhook Manually": {
+      "main": [
+        [
+          {
+            "node": "Subscribe Ready Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New PDF in Drive": {
+      "main": [
+        [
+          {
+            "node": "Download PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download PDF": {
+      "main": [
+        [
+          {
+            "node": "Upload to okraPDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "okraPDF Ready Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format Ready Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Ready Event": {
+      "main": [
+        [
+          {
+            "node": "Log Ready PDF to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "name": "okrapdf"
+    },
+    {
+      "name": "google-drive"
+    },
+    {
+      "name": "webhook"
+    }
+  ]
+}

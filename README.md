@@ -8,6 +8,7 @@ Deployable example apps built with [okrapdf](https://github.com/okrapdf/okrapdf-
 |---------|-------------|-------|
 | [collection-admin](./collection-admin) | Browse a document collection — thumbnails, chat, audit logs | React, react-admin, Vite |
 | [chatpdf-widget](./chatpdf-widget) | Embeddable PDF chat widget — one script tag, streaming, works with Typebot/Botpress | Vanilla JS, SSE |
+| [webhook-automation](./webhook-automation) | n8n, Zapier fallback, lifecycle webhooks, HMAC verification, and Slack/Sheets routing samples | n8n JSON, Node.js, Zapier Webhooks |
 
 ## Getting Started
 

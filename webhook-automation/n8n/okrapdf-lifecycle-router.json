@@ -1,0 +1,223 @@
+{
+  "name": "okraPDF: Lifecycle webhook router for ready and failed PDFs",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## okraPDF lifecycle router\n\nUse this template when PDFs already enter okraPDF through the app, API, CLI, Zapier, or another intake path.\n\n1. Activate the workflow.\n2. Run the manual trigger once to subscribe ready and failed events.\n3. okraPDF POSTs `document.processed` and `document.failed` events to this workflow.\n4. n8n writes a normalized event row to Google Sheets.\n\nAdd Slack, Airtable, Postgres, or a support-ticket node after the formatter for production routing.",
+        "height": 420,
+        "width": 430,
+        "color": 5
+      },
+      "id": "sticky-main",
+      "name": "Workflow Notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [40, 40]
+    },
+    {
+      "parameters": {},
+      "id": "manual-register",
+      "name": "Register Lifecycle Webhooks",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [480, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.okrapdf.com/v1/webhooks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event\": \"document.processed\",\n  \"target_url\": \"{{ $node['okraPDF Lifecycle Webhook'].webhookUrl }}\",\n  \"source\": \"n8n\"\n}",
+        "options": {}
+      },
+      "id": "subscribe-ready",
+      "name": "Subscribe Ready Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [730, 80],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_OKRA_CREDENTIAL_ID",
+          "name": "okraPDF API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.okrapdf.com/v1/webhooks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event\": \"document.failed\",\n  \"target_url\": \"{{ $node['okraPDF Lifecycle Webhook'].webhookUrl }}\",\n  \"source\": \"n8n\"\n}",
+        "options": {}
+      },
+      "id": "subscribe-failed",
+      "name": "Subscribe Failed Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [980, 80],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_OKRA_CREDENTIAL_ID",
+          "name": "okraPDF API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "okrapdf-lifecycle",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "id": "okra-webhook",
+      "name": "okraPDF Lifecycle Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [480, 380],
+      "webhookId": "okrapdf-lifecycle"
+    },
+    {
+      "parameters": {
+        "jsCode": "const event = $json.body || $json;\nconst data = event.data || {};\nconst isFailure = event.type === 'document.failed';\n\nreturn [{\n  json: {\n    event_id: event.id,\n    event_type: event.type,\n    status: data.status || (isFailure ? 'failed' : 'processed'),\n    job_id: data.job_id || '',\n    file_id: data.file_id || '',\n    filename: data.filename || '',\n    hosted_url: data.hosted_url || '',\n    pdf_url: data.pdf_url || '',\n    error: data.error || '',\n    action: isFailure ? 'review_failure' : 'route_ready_pdf',\n    received_at: event.created_at || new Date().toISOString()\n  }\n}];"
+      },
+      "id": "normalize-event",
+      "name": "Normalize Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [730, 380]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Document Lifecycle"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Events"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Event ID": "={{ $json.event_id }}",
+            "Event Type": "={{ $json.event_type }}",
+            "Action": "={{ $json.action }}",
+            "Status": "={{ $json.status }}",
+            "Job ID": "={{ $json.job_id }}",
+            "File ID": "={{ $json.file_id }}",
+            "Filename": "={{ $json.filename }}",
+            "Hosted URL": "={{ $json.hosted_url }}",
+            "Direct PDF URL": "={{ $json.pdf_url }}",
+            "Error": "={{ $json.error }}",
+            "Received Date": "={{ $json.received_at.split('T')[0] }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "sheets-log",
+      "name": "Log Lifecycle Event",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [980, 380],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Register Lifecycle Webhooks": {
+      "main": [
+        [
+          {
+            "node": "Subscribe Ready Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subscribe Ready Event": {
+      "main": [
+        [
+          {
+            "node": "Subscribe Failed Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "okraPDF Lifecycle Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Event": {
+      "main": [
+        [
+          {
+            "node": "Log Lifecycle Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [
+    {
+      "name": "okrapdf"
+    },
+    {
+      "name": "lifecycle"
+    },
+    {
+      "name": "webhook"
+    }
+  ]
+}
